@@ -4,6 +4,7 @@ Helper functions for managing processes.
 from __future__ import print_function
 
 import atexit
+import inspect
 import os
 import signal
 import subprocess
@@ -11,6 +12,7 @@ import sys
 
 import psutil
 from paver import tasks
+from setproctitle import getproctitle, setproctitle
 
 
 def kill_process(proc):
@@ -22,6 +24,21 @@ def kill_process(proc):
 
     for child_pid in child_pids:
         os.kill(child_pid.pid, signal.SIGKILL)
+
+
+def rename_process():
+    """
+    Replace "python" in the process name with "python_paver_<command>"
+    to make it clear in tools like New Relic Infrastructure and top
+    what this particular python process is doing.
+    """
+    command_name = inspect.currentframe().f_back.f_code.co_name
+    old_name = getproctitle()
+    if 'python_paver_' in old_name:
+        # we're processing a subcommand, the process has already been renamed
+        return
+    new_name = 'python_paver_{}'.format(command_name)
+    setproctitle(old_name.replace('python', new_name, 1))
 
 
 def run_multi_processes(cmd_list, out_log=None, err_log=None):
